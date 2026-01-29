@@ -1,0 +1,20 @@
+[project]
+name = "repo-check"
+version = "0.1.0"
+description = "Check git status for immediate subfolders of a target directory."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+  { name = "Kevin M" }
+]
+keywords = ["git", "cli", "status", "repository"]
+
+[project.scripts]
+repo-check = "repo_check.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
