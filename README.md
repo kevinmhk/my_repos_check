@@ -33,3 +33,13 @@ repo-check --path ~/workspaces
 - Green `in-sync` = local matches upstream
 - Yellow `ahead N` = local has commits not pushed
 - Red `behind N` = upstream has commits not pulled
+
+## Example output
+
+```
+apps/api          main       clean   origin    in-sync
+apps/web          main       dirty   origin    ahead 2
+docs              not-init
+infra/terraform   detached   clean   no-remote no-upstream
+tools             pending
+```
