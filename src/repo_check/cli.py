@@ -394,6 +394,11 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
 
+    git_code, _, _ = _run_git(os.getcwd(), ["--version"])
+    if git_code != 0:
+        print("Error: git is not available on PATH. Please install Git and try again.")
+        sys.exit(1)
+
     base_path = os.path.abspath(os.path.expanduser(args.path))
     if not os.path.isdir(base_path):
         parser.error(f"Not a directory: {base_path}")
