@@ -21,6 +21,18 @@ uv tool install .
 This installs an isolated tool environment under `~/.local/share/uv/tools` and exposes the `repo-check`
 command via your user PATH (typically `~/.local/bin`).
 
+Alternatively, install directly from GitHub:
+
+```bash
+uv tool install git+https://github.com/kevinmhk/repo-check.git
+```
+
+To pin a specific tag or commit:
+
+```bash
+uv tool install git+https://github.com/kevinmhk/repo-check.git@v1.0.0
+```
+
 ## Usage
 
 ```bash
