@@ -11,6 +11,7 @@
 - `repo-check --path <dir>` runs the installed console script (from `pyproject.toml`).
 - `python -m pip install -e .` installs the project in editable mode for local development.
 - `python -m pip install .` installs a regular build for local use.
+- `uv tool install .` installs the CLI as a user-level tool (recommended).
 
 ## Coding Style & Naming Conventions
 - Python 3.9+; use 4-space indentation and PEP 8 naming (`snake_case` functions, `CapWords` classes).
@@ -31,3 +32,4 @@
 ## Configuration Notes
 - Git must be available on PATH; the CLI exits early with a clear error when Git is missing.
 - Output auto-enables color and dynamic rendering only when `stdout` is a TTY.
+- The CLI ensures `~/.config/my_repos_check/config` exists and uses it for default flag values.

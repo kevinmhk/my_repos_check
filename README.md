@@ -6,12 +6,22 @@ A small CLI that scans subfolders of a target directory (depth configurable), de
 
 - Python 3.9+
 - Git on PATH
+- uv (recommended for installation)
+
+## Installation (Recommended)
+
+Use uv to install the CLI as a user-level tool:
+
+```bash
+uv tool install .
+```
+
+This installs an isolated tool environment under `~/.local/share/uv/tools` and exposes the `repo-check`
+command via your user PATH (typically `~/.local/bin`).
 
 ## Usage
 
 ```bash
-python -m repo_check.cli --path ~/workspaces
-# or, after installing
 repo-check --path ~/workspaces
 ```
 
