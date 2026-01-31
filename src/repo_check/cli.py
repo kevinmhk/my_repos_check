@@ -37,6 +37,7 @@ LABEL_PENDING = "pending"
 LABEL_NOT_INIT = "not-init"
 LABEL_UNKNOWN = "unknown"
 LABEL_DETACHED = "detached"
+LABEL_NO_COMMITS = "no-commits"
 LABEL_CLEAN = "clean"
 LABEL_DIRTY = "dirty"
 LABEL_ORIGIN = "origin"
@@ -159,7 +160,9 @@ def _resolve_ignore_paths(base_path: str, entries: List[str]) -> List[str]:
         if os.path.isabs(expanded):
             abs_path = os.path.abspath(os.path.normpath(expanded))
         else:
-            abs_path = os.path.abspath(os.path.normpath(os.path.join(base_path, expanded)))
+            abs_path = os.path.abspath(
+                os.path.normpath(os.path.join(base_path, expanded))
+            )
         ignored.append(abs_path)
     return ignored
 
@@ -209,19 +212,25 @@ def _check_repo(path: str, name: str) -> RepoResult:
         )
 
     code, branch, err = _run_git(path, ["rev-parse", "--abbrev-ref", "HEAD"])
+    unborn_head = False
     if code != 0:
-        return RepoResult(
-            name=name,
-            path=path,
-            is_repo=True,
-            branch=None,
-            is_clean=None,
-            origin_url=None,
-            upstream_ref=None,
-            ahead_count=None,
-            behind_count=None,
-            error=err or None,
-        )
+        lowered = (err or "").lower()
+        if "unknown revision" in lowered or "ambiguous argument 'head'" in lowered:
+            unborn_head = True
+            branch = LABEL_NO_COMMITS
+        else:
+            return RepoResult(
+                name=name,
+                path=path,
+                is_repo=True,
+                branch=None,
+                is_clean=None,
+                origin_url=None,
+                upstream_ref=None,
+                ahead_count=None,
+                behind_count=None,
+                error=err or None,
+            )
 
     code, status, err = _run_git(path, ["status", "--porcelain"])
     if code != 0:
@@ -241,25 +250,34 @@ def _check_repo(path: str, name: str) -> RepoResult:
     code, origin, _ = _run_git(path, ["remote", "get-url", "origin"])
     origin_url = origin if code == 0 and origin else None
 
-    code, upstream, _ = _run_git(path, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"])
-    if code == 0 and upstream:
-        code, counts, _ = _run_git(path, ["rev-list", "--left-right", "--count", "HEAD...@{u}"])
-        if code == 0 and counts:
-            parts = counts.split()
-            if len(parts) == 2 and all(p.isdigit() for p in parts):
-                behind_count = int(parts[0])
-                ahead_count = int(parts[1])
-            else:
-                behind_count = None
-                ahead_count = None
-        else:
-            behind_count = None
-            ahead_count = None
-        upstream_ref = upstream
-    else:
+    if unborn_head:
         upstream_ref = None
         behind_count = None
         ahead_count = None
+    else:
+        code, upstream, _ = _run_git(
+            path, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]
+        )
+        if code == 0 and upstream:
+            code, counts, _ = _run_git(
+                path, ["rev-list", "--left-right", "--count", "HEAD...@{u}"]
+            )
+            if code == 0 and counts:
+                parts = counts.split()
+                if len(parts) == 2 and all(p.isdigit() for p in parts):
+                    behind_count = int(parts[0])
+                    ahead_count = int(parts[1])
+                else:
+                    behind_count = None
+                    ahead_count = None
+            else:
+                behind_count = None
+                ahead_count = None
+            upstream_ref = upstream
+        else:
+            upstream_ref = None
+            behind_count = None
+            ahead_count = None
 
     is_clean = status == ""
     return RepoResult(
@@ -332,7 +350,9 @@ def _build_scan_list(
 ) -> List[Tuple[str, str]]:
     names_and_paths: List[Tuple[str, str]] = []
     target_set = set(target_paths)
-    root_targets = [path for path in target_paths if not _has_ancestor(path, target_set)]
+    root_targets = [
+        path for path in target_paths if not _has_ancestor(path, target_set)
+    ]
 
     def add_for_base(base_path: str, prefix: str) -> None:
         ignored_paths = _resolve_ignore_paths(base_path, ignore_entries)
@@ -360,8 +380,14 @@ def _render_lines(
         return f"{colored}{pad}"
 
     max_name = max(len(name) for name in names)
-    max_branch = max(len(LABEL_DETACHED), len(LABEL_UNKNOWN))
-    max_clean = max(len(LABEL_CLEAN), len(LABEL_DIRTY), len(LABEL_UNKNOWN), len(LABEL_NOT_INIT), len(LABEL_PENDING))
+    max_branch = max(len(LABEL_DETACHED), len(LABEL_UNKNOWN), len(LABEL_NO_COMMITS))
+    max_clean = max(
+        len(LABEL_CLEAN),
+        len(LABEL_DIRTY),
+        len(LABEL_UNKNOWN),
+        len(LABEL_NOT_INIT),
+        len(LABEL_PENDING),
+    )
     max_remote = max(len(LABEL_ORIGIN), len(LABEL_NO_REMOTE))
     max_sync = max(len(LABEL_IN_SYNC), len(LABEL_NO_UPSTREAM), len(LABEL_ERROR))
 
@@ -370,7 +396,12 @@ def _render_lines(
             continue
         if result.branch:
             max_branch = max(max_branch, len(result.branch))
-        if show_remote and result.upstream_ref and result.ahead_count is not None and result.behind_count is not None:
+        if (
+            show_remote
+            and result.upstream_ref
+            and result.ahead_count is not None
+            and result.behind_count is not None
+        ):
             parts: List[str] = []
             if result.ahead_count > 0:
                 parts.append(f"ahead {result.ahead_count}")
@@ -426,6 +457,9 @@ def _render_lines(
         if branch == "HEAD":
             branch_raw = LABEL_DETACHED
             branch_colored = _color(branch_raw, ANSI_BLUE, use_color)
+        elif branch == LABEL_NO_COMMITS:
+            branch_raw = LABEL_NO_COMMITS
+            branch_colored = _color(branch_raw, ANSI_YELLOW, use_color)
         else:
             branch_raw = branch
             branch_colored = _color(branch_raw, ANSI_BLUE, use_color)
@@ -451,7 +485,11 @@ def _render_lines(
             else:
                 remote_raw = LABEL_NO_REMOTE
                 remote_colored = _color(remote_raw, ANSI_RED, use_color)
-            if result.upstream_ref and result.ahead_count is not None and result.behind_count is not None:
+            if (
+                result.upstream_ref
+                and result.ahead_count is not None
+                and result.behind_count is not None
+            ):
                 if result.behind_count == 0 and result.ahead_count == 0:
                     sync_raw = LABEL_IN_SYNC
                     sync_colored = _color(sync_raw, ANSI_GREEN, use_color)
@@ -532,7 +570,9 @@ async def _run_checks(
     if allow_dynamic:
         _print_block(_render_lines(names, results, use_color, show_remote))
 
-    tasks = [run_one(idx, name, path) for idx, (name, path) in enumerate(names_and_paths)]
+    tasks = [
+        run_one(idx, name, path) for idx, (name, path) in enumerate(names_and_paths)
+    ]
     await asyncio.gather(*tasks)
 
     if not allow_dynamic:

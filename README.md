@@ -59,6 +59,38 @@ Reinstall the tool from local source and bypass the cache:
 uv tool install . --reinstall --no-cache
 ```
 
+## Development Workflows
+
+Install dev tools:
+
+```bash
+uv pip install -e ".[dev]"
+```
+
+Lint:
+
+```bash
+ruff check .
+```
+
+Format:
+
+```bash
+ruff format .
+```
+
+Type check:
+
+```bash
+ty check
+```
+
+Tests:
+
+```bash
+python -m pytest
+```
+
 ### Common flags
 
 - `--path` (repeatable; defaults to config values)
@@ -88,6 +120,7 @@ Blank lines and lines starting with `#` are ignored.
 - Green `clean` = no uncommitted changes
 - Red `dirty` = uncommitted changes
 - Yellow `not-init` = no Git repository detected (shown in branch column)
+- Yellow `no-commits` = Git repo with no commits yet (unborn HEAD)
 - Dim `pending` = check in progress (shown in branch column)
 - Cyan `origin` = remote origin configured
 - Red `no-remote` = no remote origin configured
