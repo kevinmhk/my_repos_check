@@ -74,3 +74,17 @@ def test_check_repo_unborn_head(monkeypatch) -> None:
     assert result.upstream_ref is None
     assert result.origin_url is None
     assert result.is_clean is True
+
+
+def test_find_ignored_targets_resolves_paths(tmp_path: Path) -> None:
+    base = tmp_path / "root"
+    base.mkdir()
+    target = base / "nested"
+    target.mkdir()
+
+    targets = [str(base), str(target)]
+    ignore_entries = ["nested"]
+
+    ignored = cli._find_ignored_targets(targets, ignore_entries)
+
+    assert ignored == [str(target)]

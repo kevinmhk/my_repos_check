@@ -369,6 +369,22 @@ def _build_scan_list(
     return names_and_paths
 
 
+def _find_ignored_targets(
+    target_paths: List[str],
+    ignore_entries: List[str],
+) -> List[str]:
+    ignored_targets: List[str] = []
+    seen: set[str] = set()
+    target_set = set(target_paths)
+    for base_path in target_paths:
+        ignored_paths = _resolve_ignore_paths(base_path, ignore_entries)
+        for target in target_set:
+            if target in ignored_paths and target not in seen:
+                seen.add(target)
+                ignored_targets.append(target)
+    return ignored_targets
+
+
 def _render_lines(
     names: List[str],
     results: List[Optional[RepoResult]],
@@ -626,6 +642,14 @@ def main() -> None:
             parser.error(f"Not a directory: {path}")
 
     ignore_entries = _load_ignore_entries()
+    ignored_targets = _find_ignored_targets(target_paths, ignore_entries)
+    if ignored_targets:
+        for target in ignored_targets:
+            print(
+                f"Error: target path is also ignored: {target}",
+                file=sys.stderr,
+            )
+        sys.exit(2)
     names_and_paths = _build_scan_list(target_paths, include_hidden, ignore_entries)
     if not names_and_paths:
         print("No subfolders found.")
